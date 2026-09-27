@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<vfs>
+  <dir name="home">
+    <dir name="user">
+      <file name="notes.txt" content="Tm90ZXMgd2l0aCB0ZXh0" />
+      <file name="script.sh" content="IyEvYmluL2Jhc2gKZWNobyBoaQ==" />
+    </dir>
+  </dir>
+  <dir name="etc">
+    <file name="config.ini" content="a2V5PXZhbHVl" />
+  </dir>
+  <file name="readme.md" content="IyBSRUFETUUK" />
+</vfs>
