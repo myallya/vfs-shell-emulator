@@ -1,0 +1,13 @@
+# Тест VFS
+ls
+cd /home
+ls
+cd /home/user
+ls
+cd ..
+ls
+cd /
+ls
+cd /нет_такой
+ls
+exit
