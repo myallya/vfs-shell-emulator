@@ -123,6 +123,27 @@ class Vfs:
             node = node.children[p]
         return node
 
+    def path_to(self, node):
+        """Возвращает строковый путь до узла от корня."""
+        if node is self.root:
+            return "/"
+        parts = []
+
+        def find(current, target, acc):
+            for name, child in current.children.items():
+                if child is target:
+                    return acc + [name]
+                if child.is_dir:
+                    res = find(child, target, acc + [name])
+                    if res:
+                        return res
+            return None
+
+        result = find(self.root, node, [])
+        if result is None:
+            return "/"
+        return "/" + "/".join(result) 
+    
     def _parent_of(self, node):
         """Возвращает родителя узла (обходом от корня)."""
         if node is self.root:
