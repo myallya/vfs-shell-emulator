@@ -1,0 +1,13 @@
+# Тест команд этапа 4
+ls
+cd /home/user
+ls -l
+wc notes.txt
+rev notes.txt
+cd /
+ls -l
+wc /readme.md
+rev /readme.md
+wc /etc
+rev /нет_такого
+exit
