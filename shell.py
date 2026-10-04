@@ -12,16 +12,35 @@ VFS_NAME = "vfs"
 
 
 def cmd_ls(vfs, args):
-    """Выводит содержимое каталога."""
-    path = args[0] if args else "."
+    """Выводит содержимое каталога.
+
+    Поддерживает флаг -l: показывает права, владельца, группу.
+    """
+    long_fmt = False
+    paths = []
+    for a in args:
+        if a == "-l":
+            long_fmt = True
+        else:
+            paths.append(a)
+    path = paths[0] if paths else "."
     node = vfs.resolve_path(path)
+
     if not node.is_dir:
-        print(node.name)
-        return
-    for name in sorted(node.children):
-        child = node.children[name]
+        items = [node]
+    else:
+        items = [node.children[n] for n in sorted(node.children)]
+
+    for child in items:
         mark = "/" if child.is_dir else ""
-        print(f"{name}{mark}")
+        if long_fmt:
+            perm = oct(child.mode)[2:].zfill(3)
+            print(
+                f"{perm} {child.owner:>6} {child.group:>6} "
+                f"{child.name}{mark}"
+            )
+        else:
+            print(f"{child.name}{mark}")
 
 
 def cmd_cd(vfs, args):
@@ -32,11 +51,40 @@ def cmd_cd(vfs, args):
         raise VfsError(f"Не каталог: {path}")
     vfs.cwd = node
 
+def cmd_wc(vfs, args):
+    """Считает строки, слова и символы в файле."""
+    if not args:
+        raise VfsError("wc: нужен путь к файлу")
+    path = args[0]
+    node = vfs.resolve_path(path)
+    if node.is_dir:
+        raise VfsError(f"wc: {path} — это каталог")
+    text = node.content.decode("utf-8", errors="replace")
+    lines = text.splitlines()
+    words = text.split()
+    chars = len(text)
+    print(f"{len(lines)} {len(words)} {chars} {path}")
+
+
+def cmd_rev(vfs, args):
+    """Разворачивает каждую строку файла задом наперёд."""
+    if not args:
+        raise VfsError("rev: нужен путь к файлу")
+    path = args[0]
+    node = vfs.resolve_path(path)
+    if node.is_dir:
+        raise VfsError(f"rev: {path} — это каталог")
+    text = node.content.decode("utf-8", errors="replace")
+    for line in text.splitlines():
+        print(line[::-1])
 
 COMMANDS = {
     "ls": cmd_ls,
     "cd": cmd_cd,
+    "wc": cmd_wc,
+    "rev": cmd_rev,
 }
+
 
 
 def run_command(vfs, cmd, args):
@@ -52,10 +100,9 @@ def run_command(vfs, cmd, args):
 
 
 def prompt(vfs):
-    """Формирует приглашение вида vfs:/$ или vfs:/имя$."""
-    if vfs.cwd is vfs.root:
-        return f"{VFS_NAME}:/$ "
-    return f"{VFS_NAME}:/{vfs.cwd.name}$ "
+    """Формирует приглашение вида vfs:/полный/путь$ ."""
+    path = vfs.path_to(vfs.cwd)
+    return f"{VFS_NAME}:{path}$ "
 
 
 def execute_line(vfs, line):
