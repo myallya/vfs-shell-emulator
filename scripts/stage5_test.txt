@@ -1,0 +1,16 @@
+# Тест команд этапа 5
+ls -l
+chmod 600 readme.md
+chown user:users readme.md
+ls -l
+cd /home/user
+chmod 755 script.sh
+chown alice:dev script.sh
+ls -l
+vfs-load data/vfs_min.xml
+ls
+wc /hello.txt
+rev /hello.txt
+cd /
+chmod 999 /нет_такого
+exit
