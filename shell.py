@@ -78,14 +78,60 @@ def cmd_rev(vfs, args):
     for line in text.splitlines():
         print(line[::-1])
 
+def cmd_chown(vfs, args):
+    """Меняет владельца и группу файла.
+
+    Формат: chown owner:group путь
+    """
+    if len(args) != 2:
+        raise VfsError("использование: chown owner:group путь")
+    spec, path = args
+    if ":" not in spec:
+        raise VfsError("формат: owner:group")
+    owner, group = spec.split(":", 1)
+    node = vfs.resolve_path(path)
+    node.owner = owner
+    node.group = group
+    print(f"{path} -> {owner}:{group}")
+
+
+def cmd_chmod(vfs, args):
+    """Меняет права доступа к файлу.
+
+    Формат: chmod mode путь (mode — восьмеричное число, напр. 755)
+    """
+    if len(args) != 2:
+        raise VfsError("использование: chmod mode путь")
+    mode_str, path = args
+    try:
+        mode = int(mode_str, 8)
+    except ValueError:
+        raise VfsError(f"неверный режим: {mode_str}")
+    node = vfs.resolve_path(path)
+    node.mode = mode
+    print(f"{path} -> {mode_str}")
+
+
+def cmd_vfs_load(vfs, args, state):
+    """Загружает новую VFS из XML-файла.
+
+    Модифицирует state["vfs"], т.к. VFS заменяется целиком.
+    """
+    if len(args) != 1:
+        raise VfsError("использование: vfs-load путь")
+    path = args[0]
+    new_vfs = Vfs.from_xml(path)
+    state["vfs"] = new_vfs
+    print(f"VFS загружена: {path}") 
+
 COMMANDS = {
     "ls": cmd_ls,
     "cd": cmd_cd,
     "wc": cmd_wc,
     "rev": cmd_rev,
+    "chown": cmd_chown,
+    "chmod": cmd_chmod,
 }
-
-
 
 def run_command(vfs, cmd, args):
     """Выполняет команду над VFS.
@@ -105,13 +151,17 @@ def prompt(vfs):
     return f"{VFS_NAME}:{path}$ "
 
 
-def execute_line(vfs, line):
+def execute_line(state, line):
     """Выполняет одну строку. Возвращает статус."""
+    vfs = state["vfs"]
     parts = line.split()
     cmd, args = parts[0], parts[1:]
     if cmd == "exit":
         return "exit"
     try:
+        if cmd == "vfs-load":
+            cmd_vfs_load(vfs, args, state)
+            return "ok"
         if run_command(vfs, cmd, args):
             return "ok"
         return "error"
@@ -120,8 +170,9 @@ def execute_line(vfs, line):
         return "error"
 
 
-def run_script(vfs, script_path):
+def run_script(state, script_path):
     """Выполняет скрипт, останавливается при первой ошибке."""
+    vfs = state["vfs"]
     try:
         with open(script_path, encoding="utf-8") as f:
             for raw_line in f:
@@ -129,7 +180,8 @@ def run_script(vfs, script_path):
                 if not line or line.startswith("#"):
                     continue
                 print(f"{prompt(vfs)}{line}")
-                result = execute_line(vfs, line)
+                result = execute_line(state, line)
+                vfs = state["vfs"]
                 if result == "exit":
                     print("Выход.")
                     return
@@ -142,11 +194,12 @@ def run_script(vfs, script_path):
         sys.exit(1)
 
 
-def repl(vfs):
+def repl(state):
     """Интерактивный режим."""
     print(f"Добро пожаловать в эмулятор shell. VFS: {VFS_NAME}")
     print("Введите 'exit' для выхода.")
     while True:
+        vfs = state["vfs"]
         try:
             line = input(prompt(vfs))
         except EOFError:
@@ -155,7 +208,7 @@ def repl(vfs):
         line = line.strip()
         if not line:
             continue
-        if execute_line(vfs, line) == "exit":
+        if execute_line(state, line) == "exit":
             print("Выход.")
             break
 
@@ -181,10 +234,12 @@ def main():
         print(f"Ошибка загрузки VFS: {e}")
         sys.exit(1)
 
+    state = {"vfs": vfs}
+
     if args.script:
-        run_script(vfs, args.script)
+        run_script(state, args.script)
     else:
-        repl(vfs)
+        repl(state)
 
 
 if __name__ == "__main__":
